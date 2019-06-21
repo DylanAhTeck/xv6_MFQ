@@ -24,3 +24,15 @@ struct pstat
 };
 
 struct pstat pstat_var[NPSTAT];
+/*
+pid -> DONE. Take from proc stucture
+name -> DONE. 
+priority -> DONE. Update in addToQueue.
+ticks -> DONE. Done after timeslice completed in scheduler
+times -> DONE. Done after timeslice completed in scheduler
+queue -> DONE. Done during each completed tick in updatePstat()
+total_ticks -> Done during each completed tick in updatePstat()
+wait_time -> Done during each completed tick in updatePstat()
+
+
+*/

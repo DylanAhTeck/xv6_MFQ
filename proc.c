@@ -438,7 +438,9 @@ void downgradeQueue(struct priorityqueue *pq, struct proc *p)
   }
 }
 
-void updatePstatQueue(void)
+//Updates queue, total_ticks and wait_time fields
+//for all processes every time a tick occurs
+void updatePstat(void)
 {
   struct proc *p;
 
@@ -446,10 +448,18 @@ void updatePstatQueue(void)
   {
     if (p->state == RUNNABLE)
     {
+      //index 499 keeps getting overwritten
+      //since TOTAL_TICKS never goes past NTICKS (i.e 500)
+      // probably won't matter
       p->queue[TOTAL_TICKS] = p->priority;
+      p->total_ticks++;
+
+      if (p->priority == 2)
+        p->wait_time++;
     }
   }
 }
+
 struct proc *returnProc(void)
 {
   struct priorityqueue *pq = returnQueue();
@@ -526,12 +536,6 @@ void scheduler(void)
       if (p != returnProc() || p->state != RUNNABLE)
         continue;
 
-      //Keep track of number of ticks, where each
-      //tick is valid only if a process is being run
-      //If no processes are being run then code below is not executed.
-      if (TOTAL_TICKS < NTICKS)
-        TOTAL_TICKS++;
-
       struct priorityqueue *queue = returnQueue();
 
       int queuepriority = queue->priority;
@@ -541,7 +545,9 @@ void scheduler(void)
       // if (p->state != RUNNABLE)
       //  continue;
 
-      //Each iteration of this loop is a tick
+      //Each iteration of this loop is a tick!
+      //If p->state goes to something other than runnable by end of this
+      //loop then that means proc did not complete its tick
       while (p->state == RUNNABLE && count < ticks)
       {
 
@@ -560,12 +566,21 @@ void scheduler(void)
         // It should have changed its p->state before coming back.
         c->proc = 0;
 
+        //If state is not RUNNABLE here then means tick did not complete
+
         //Added
+
         count++;
         p->Ticks++;
 
         //Update queue pstat var of each process
-        updatePstatQueue();
+        updatePstat();
+
+        //Keep track of number of ticks, where each
+        //tick is valid only if a process is being run
+        //If no processes are being run then code below is not executed.
+        if (TOTAL_TICKS < NTICKS)
+          TOTAL_TICKS++;
       }
       //pstat - ticks[3]. Update ticks regardless
       p->ticks[queuepriority] = count;
@@ -773,7 +788,6 @@ void procdump(void)
   }
 }
 
-/*
 int getpinfo(int pid)
 {
   struct proc *p;
@@ -795,4 +809,3 @@ int getpinfo(int pid)
   release(&ptable.lock);
   return -1;
 }
-*/

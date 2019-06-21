@@ -85,7 +85,6 @@ int sys_uptime(void)
 }
 
 //Added for getpinfo
-/*
 int sys_getpinfo(void)
 {
   int pid;
@@ -93,7 +92,5 @@ int sys_getpinfo(void)
   if (argint(0, &pid) < 0)
     return -1;
 
-  return 0;
-  //return getpinfo(pid);
+  return getpinfo(pid);
 }
-*/
