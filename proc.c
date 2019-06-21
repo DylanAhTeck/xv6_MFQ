@@ -98,7 +98,7 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
   p->priority = 0;
-  //p->stat->pid = p->pid;
+
   addToQueue(&q0, p);
 
   release(&ptable.lock);
@@ -136,17 +136,23 @@ void userinit(void)
   extern char _binary_initcode_start[], _binary_initcode_size[];
 
   //
+
+  TOTAL_TICKS = 0;
+
   q0.end = 0;
   q0.numOfProc = 0;
   q0.ticks = 1;
+  q0.priority = 0;
 
   q1.end = 0;
   q1.numOfProc = 0;
   q1.ticks = 2;
+  q1.priority = 1;
 
   q2.end = 0;
   q2.numOfProc = 0;
   q2.ticks = 8;
+  q2.priority = 2;
   //
 
   p = allocproc();
@@ -394,8 +400,11 @@ void addToQueue(struct priorityqueue *pq, struct proc *p)
   int index = pq->end;
   pq->queue[index] = p;
   pq->end++;
-  p->ticks = 0;
+  p->Ticks = 0;
   pq->numOfProc++;
+
+  int queuepriority = pq->priority;
+  p->priority = queuepriority;
 }
 
 void removeFromQueue(struct priorityqueue *pq, struct proc *p)
@@ -429,6 +438,18 @@ void downgradeQueue(struct priorityqueue *pq, struct proc *p)
   }
 }
 
+void updatePstatQueue(void)
+{
+  struct proc *p;
+
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if (p->state == RUNNABLE)
+    {
+      p->queue[TOTAL_TICKS] = p->priority;
+    }
+  }
+}
 struct proc *returnProc(void)
 {
   struct priorityqueue *pq = returnQueue();
@@ -457,49 +478,6 @@ struct proc *returnProc(void)
 
   //cprintf("At end of returnProc");
   return 0;
-  /*
-  if (pq->queue[0]->state == RUNNABLE)
-    return pq->queue[0];
-  if (pq->queue[0]->state == SLEEPING)
-  {
-    struct proc *p = pq->queue[0];
-    removeFromQueue(pq, p);
-    if (pq->queue[0]->state == SLEEPING)
-    {
-      cprintf("second also sleeping!");
-      addToQueue(pq, p);
-      return 0;
-    }
-    cprintf("first was sleeping");
-  }
-  return 0;
-*/
-  /*
-  while (pq->queue[0]->state != RUNNABLE)
-  {
-    struct proc *p = pq->queue[0];
-    removeFromQueue(pq, p);
-    addToQueue(pq, p);
-    cprintf("Infinite loop?");
-  }
-  */
-
-  /*
-  for (int i = 0; i < pq->end; i++)
-  {
-
-    if (pq->queue[i]->state == SLEEPING)
-    {
-      removeFromQueue(pq, pq->queue[i]);
-      addToQueue(pq, pq->queue[i]);
-    }
-    else
-      return pq->queue[i];
-  }
-  */
-
-  //?
-  //return pq->queue[0];
 }
 
 void boost(struct proc *p)
@@ -548,22 +526,22 @@ void scheduler(void)
       if (p != returnProc() || p->state != RUNNABLE)
         continue;
 
+      //Keep track of number of ticks, where each
+      //tick is valid only if a process is being run
+      //If no processes are being run then code below is not executed.
+      if (TOTAL_TICKS < NTICKS)
+        TOTAL_TICKS++;
+
       struct priorityqueue *queue = returnQueue();
+
+      int queuepriority = queue->priority;
       int ticks = queue->ticks;
       int count = 0;
-
-      /*
-      if (queue == q0.queue)
-        ticks = 1;
-      else if (queue == q1.queue)
-        ticks = 2;
-      else if (queue == q2.queue)
-        ticks = 8;
-      */
 
       // if (p->state != RUNNABLE)
       //  continue;
 
+      //Each iteration of this loop is a tick
       while (p->state == RUNNABLE && count < ticks)
       {
 
@@ -584,14 +562,22 @@ void scheduler(void)
 
         //Added
         count++;
-        p->ticks++;
+        p->Ticks++;
+
+        //Update queue pstat var of each process
+        updatePstatQueue();
       }
+      //pstat - ticks[3]. Update ticks regardless
+      p->ticks[queuepriority] = count;
+      //pstat - times[3]
+      p->times[queuepriority]++;
+
       //Q: How to test for sleep and I/O?
       //Will the state be sleeping?
       // Decrement priority if used timeslice, else leave the same
       if (p->state == RUNNABLE && (p->priority == 1 || p->priority == 0))
         downgradeQueue(queue, p);
-      else if (p->state == RUNNABLE && p->priority == 2 && p->ticks >= 50)
+      else if (p->state == RUNNABLE && p->priority == 2 && p->Ticks >= 50)
       {
         boost(p);
       }

@@ -49,11 +49,14 @@ struct priorityqueue
   int ticks;
   int end;
   int numOfProc;
+  int priority;
 };
 
 struct priorityqueue q0;
 struct priorityqueue q1;
 struct priorityqueue q2;
+
+int TOTAL_TICKS;
 
 enum procstate
 {
@@ -82,10 +85,20 @@ struct proc
   struct inode *cwd;          // Current directory
   char name[16];              // Process name (debugging)
 
-  struct pstat *stat;
+  //Added to fill out pstat
 
   int priority; // Added for proj3
-  int ticks;
+
+  int ticks[3];
+  int times[3];
+  //NTICKS = 500 (MACRO)
+  int queue[500];
+
+  int total_ticks;
+  int wait_time;
+
+  //Not in pstat
+  int Ticks;
 };
 
 // Process memory is laid out contiguously, low addresses first:
