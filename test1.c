@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
     }
 
     //Print info
-    //printf(1, getpinfo(getpid()));
+    printf(1, "%d", getpinfo(getpid()));
 
     exit();
 }

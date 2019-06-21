@@ -797,10 +797,33 @@ int getpinfo(int pid)
   {
     if (p->pid == pid)
     {
-      p->killed = 1;
-      // Wake process from sleep if necessary.
-      if (p->state == SLEEPING)
-        p->state = RUNNABLE;
+
+      cprintf("PID: %d\n", p->pid);
+      cprintf("Name: %s\n", p->name);
+      cprintf("Priority: %d\n", p->priority);
+      cprintf("Ticks: ");
+      for (int i = 0; i < 3; i++)
+      {
+        cprintf("%d ", p->ticks[i]);
+        if (i == 2)
+          cprintf("\n");
+      }
+      cprintf("Times: ");
+      for (int i = 0; i < 3; i++)
+      {
+        cprintf("%d ", p->times[i]);
+        if (i == 2)
+          cprintf("\n");
+      }
+      cprintf("Queue: ");
+      for (int i = 0; i < NTICKS; i++)
+      {
+        cprintf("%d ", p->queue[i]);
+        if (i == NTICKS - 1)
+          cprintf("\n");
+      }
+      cprintf("Total ticks: %d\n", p->total_ticks);
+      cprintf("Wait time: %d\n", p->wait_time);
 
       release(&ptable.lock);
       return 0;
