@@ -98,7 +98,6 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
   p->priority = 0;
-
   addToQueue(&q0, p);
 
   release(&ptable.lock);
@@ -153,7 +152,6 @@ void userinit(void)
   q2.numOfProc = 0;
   q2.ticks = 8;
   q2.priority = 2;
-  //
 
   p = allocproc();
 
@@ -397,14 +395,13 @@ struct priorityqueue *returnQueue(void)
 void addToQueue(struct priorityqueue *pq, struct proc *p)
 {
 
-  int index = pq->end;
-  pq->queue[index] = p;
+  pq->queue[pq->end] = p;
   pq->end++;
-  p->Ticks = 0;
   pq->numOfProc++;
 
-  int queuepriority = pq->priority;
-  p->priority = queuepriority;
+  p->Ticks = 0;
+
+  p->priority = pq->priority;
 }
 
 void removeFromQueue(struct priorityqueue *pq, struct proc *p)
@@ -413,9 +410,10 @@ void removeFromQueue(struct priorityqueue *pq, struct proc *p)
     panic("LOOK IN REMOVE FROM QUEUE FUNCTION");
 
   int firstFreeIndex = pq->end;
-  for (int i = 1; i < firstFreeIndex; i++)
+
+  for (int i = 0; i < firstFreeIndex; i++)
   {
-    pq->queue[i - 1] = pq->queue[i];
+    pq->queue[i] = pq->queue[i + 1];
   }
   pq->end--;
   pq->numOfProc--;
@@ -423,18 +421,16 @@ void removeFromQueue(struct priorityqueue *pq, struct proc *p)
 
 void downgradeQueue(struct priorityqueue *pq, struct proc *p)
 {
-  if (pq == &q0)
+  if (pq->priority == 0)
   {
-    removeFromQueue(pq, p);
+    removeFromQueue(&q0, p);
     addToQueue(&q1, p);
-    p->priority++;
   }
 
-  else if (pq == &q1)
+  else if (pq->priority == 1)
   {
-    removeFromQueue(pq, p);
+    removeFromQueue(&q1, p);
     addToQueue(&q2, p);
-    p->priority++;
   }
 }
 
@@ -475,6 +471,7 @@ struct proc *returnProc(void)
     if (pq->queue[i]->state == RUNNABLE)
     {
       struct proc *p = pq->queue[i];
+    
       if (i != 0)
       {
         //Swap with first
@@ -490,12 +487,78 @@ struct proc *returnProc(void)
   return 0;
 }
 
+
+void printQueues(void)
+{
+
+  
+cprintf("\nQUEUE0 TIMELINE -- ");
+for(int i = 0; i < q0.end; i++)
+{
+  cprintf("PID: %d %s ", q0.queue[i]->pid, q0.queue[i]->name);
+  
+}
+
+cprintf("\nQUEUE1 TIMELINE -- ");
+for(int i = 0; i < q1.end; i++)
+{
+  cprintf("PID: %d %s ", q1.queue[i]->pid, q1.queue[i]->name);
+}
+
+cprintf("\nQUEUE2 TIMELINE -- ");
+
+for(int i = 0; i < q2.end; i++)
+{
+  cprintf("PID: %d %s ", q2.queue[i]->pid, q2.queue[i]->name);
+ 
+}
+
+
+
+}
+
+
+/*
+void print(void)
+{
+  cprintf("\nQUEUES -- ");
+  for(int i = 0; i < 100; i++)
+  {
+    cprint("%s ", p->name[i]);
+  }
+  cprintf("\n");
+    for(int i = 0; i < 100; i++)
+  {
+    cprint("%s ", p->name[i]);
+  }
+  cprintf("\n");
+    for(int i = 0; i < 100; i++)
+  {
+    cprint("%s ", p->name[i]);
+  }
+  cprintf("\n");
+  
+}
+*/
 void boost(struct proc *p)
 {
   removeFromQueue(&q2, p);
   addToQueue(&q0, p);
   p->priority = 0;
 }
+
+int queue0[500];
+int queue1[500];
+int queue2[500];
+
+char* name0[500];
+char* name1[500];
+char* name2[500];
+
+char* state0[500];
+char* state1[500];
+char* state2[500];
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -509,6 +572,8 @@ void scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
+
+  
 
   for (;;)
   {
@@ -533,14 +598,19 @@ void scheduler(void)
     //for (int i = 0; i < NPROC; i++)
     {
       //Careful here. If get error check here
-      if (p != returnProc() || p->state != RUNNABLE)
+      if (p != returnProc())
         continue;
 
       struct priorityqueue *queue = returnQueue();
-
-      int queuepriority = queue->priority;
-      int ticks = queue->ticks;
+      
+      //printQueues();
+      
+      int queuepriority = p->priority;
+     
       int count = 0;
+
+      //cprintf("%d", p->priority);
+      //cprintf("%s ", p->name);
 
       // if (p->state != RUNNABLE)
       //  continue;
@@ -548,14 +618,39 @@ void scheduler(void)
       //Each iteration of this loop is a tick!
       //If p->state goes to something other than runnable by end of this
       //loop then that means proc did not complete its tick
-      while (p->state == RUNNABLE && count < ticks)
+      while (p->state == RUNNABLE && count < queue->ticks)
       {
-
+        if(p->priority == 0) 
+        {
+          queue0[TOTAL_TICKS] = p->pid;
+          name0[TOTAL_TICKS] = p->name;
+          if(p->state == RUNNABLE) state0[TOTAL_TICKS] = "Runnable";
+          if(p->state == SLEEPING) state0[TOTAL_TICKS] = "Sleeping";
+          if(p->state == ZOMBIE) state0[TOTAL_TICKS] = "Zombie";
+        }
+        if(p->priority == 1) 
+        {
+          queue1[TOTAL_TICKS] = p->pid;
+          name1[TOTAL_TICKS] = p->name;
+          if(p->state == RUNNABLE) state1[TOTAL_TICKS] = "Runnable";
+          if(p->state == SLEEPING) state1[TOTAL_TICKS] = "Sleeping";
+          if(p->state == ZOMBIE) state1[TOTAL_TICKS] = "Zombie";
+        }
+        if(p->priority == 2) 
+        {
+          queue2[TOTAL_TICKS] = p->pid;
+          name2[TOTAL_TICKS] = p->name;
+                if(p->state == RUNNABLE) state2[TOTAL_TICKS] = "Runnable";
+          if(p->state == SLEEPING) state2[TOTAL_TICKS] = "Sleeping";
+          if(p->state == ZOMBIE) state2[TOTAL_TICKS] = "Zombie";
+        }
+        
         // Switch to chosen process.  It is the process's job
         // to release ptable.lock and then reacquire it
         // before jumping back to us.
 
         c->proc = p;
+
         switchuvm(p);
         p->state = RUNNING;
 
@@ -567,8 +662,30 @@ void scheduler(void)
         c->proc = 0;
 
         //If state is not RUNNABLE here then means tick did not complete
-
+        
         //Added
+
+        if(p->priority == 0) 
+        {
+          
+          if(p->state == RUNNABLE) state0[TOTAL_TICKS] = "Runnable";
+          if(p->state == SLEEPING) state0[TOTAL_TICKS] = "Sleeping";
+          if(p->state == ZOMBIE) state0[TOTAL_TICKS] = "Zombie";
+        }
+        if(p->priority == 1) 
+        {
+          
+          if(p->state == RUNNABLE) state1[TOTAL_TICKS] = "Runnable";
+          if(p->state == SLEEPING) state1[TOTAL_TICKS] = "Sleeping";
+          if(p->state == ZOMBIE) state1[TOTAL_TICKS] = "Zombie";
+        }
+        if(p->priority == 2) 
+        {
+         
+          if(p->state == RUNNABLE) state2[TOTAL_TICKS] = "Runnable";
+          if(p->state == SLEEPING) state2[TOTAL_TICKS] = "Sleeping";
+          if(p->state == ZOMBIE) state2[TOTAL_TICKS] = "Zombie";
+        }
 
         count++;
         p->Ticks++;
@@ -583,18 +700,23 @@ void scheduler(void)
           TOTAL_TICKS++;
       }
       //pstat - ticks[3]. Update ticks regardless
-      p->ticks[queuepriority] = count;
+      p->ticks[queuepriority] += count;
       //pstat - times[3]
-      p->times[queuepriority]++;
+      //cprintf("QUEUE PRIORITY %d", queuepriority);
+      p->times[p->priority] = p->times[p->priority] + 1;
 
       //Q: How to test for sleep and I/O?
       //Will the state be sleeping?
       // Decrement priority if used timeslice, else leave the same
       if (p->state == RUNNABLE && (p->priority == 1 || p->priority == 0))
+      {
         downgradeQueue(queue, p);
+      }
+
       else if (p->state == RUNNABLE && p->priority == 2 && p->Ticks >= 50)
       {
         boost(p);
+     
       }
 
       else if (p->state == SLEEPING)
@@ -788,6 +910,7 @@ void procdump(void)
   }
 }
 
+/*
 int getpinfo(int pid)
 {
   struct proc *p;
@@ -832,3 +955,109 @@ int getpinfo(int pid)
   release(&ptable.lock);
   return -1;
 }
+*/
+
+void print_pstat_info(struct proc *p)
+{
+  cprintf("PID: %d\n", p->pid);
+  cprintf("Name: %s\n", p->name);
+  cprintf("   scheduled in q0: %d times\n", p->times[0]);
+  cprintf("   scheduled in q1: %d times\n", p->times[1]);
+  cprintf("   scheduled in q2: %d times\n", p->times[2]);
+  cprintf("   total ticks: %d\n", p->total_ticks);
+  cprintf("   wait time %d\n", p->wait_time);
+}
+
+void printAll(void)
+{
+  cprintf("\nQUEUE0 \n");
+  for(int i = 0; i < 50; i++)
+  {
+    cprintf("%d-%s[%s] \t", queue0[i], name0[i], state0[i]);
+  }
+   cprintf("\nQUEUE1 \n");
+  for(int i = 0; i < 50; i++)
+  {
+    cprintf("%d-%s[%s] \t", queue1[i], name1[i], state1[i]);
+  }
+   cprintf("\nQUEUE2 \n");
+  for(int i = 0; i < 50; i++)
+  {
+    cprintf("%d-%s[%s] \t", queue2[i], name2[i], state2[i]);
+  }
+}
+int n =500;
+void printNames(void)
+{
+  cprintf("\nQUEUE0 \n");
+ for(int i = 0; i < n; i++)
+  {
+    cprintf("%s ", name0[i]);
+  }
+  cprintf("\nQUEUE1 \n");
+    for(int i = 0; i < n; i++)
+  {
+    cprintf("%s ",name1[i]);
+  }
+  cprintf("\nQUEUE2 \n");
+    for(int i = 0; i < n; i++)
+  {
+    cprintf("%s ", name2[i]);
+  }
+  cprintf("\n");
+
+}
+
+void printStates(void)
+{
+  cprintf("\nQUEUE0 \n");
+  for(int i = 0; i < n; i++)
+  {
+    cprintf("%s ", state0[i]);
+  }
+  cprintf("\nQUEUE1 \n");
+    for(int i = 0; i < n; i++)
+  {
+    cprintf("%s ",state1[i]);
+  }
+  cprintf("\nQUEUE2 \n");
+    for(int i = 0; i < n; i++)
+  {
+    cprintf("%s ", state2[i]);
+  }
+  cprintf("\n");
+
+}
+void printPID(void)
+{
+  cprintf("\nQUEUE0 \n");
+  for(int i = 0; i < n; i++)
+  {
+    cprintf("%d ", queue0[i]);
+  }
+  cprintf("\nQUEUE1 \n");
+    for(int i = 0; i < n; i++)
+  {
+    cprintf("%d ",queue1[i]);
+  }
+  cprintf("\nQUEUE2 \n");
+    for(int i = 0; i < n; i++)
+  {
+    cprintf("%d ", queue2[i]);
+  }
+  cprintf("\n");
+}
+
+
+int getpinfo(int target_pid)
+{
+  //printAll();
+  printPID();
+ printNames();
+ printStates();
+  return 0;
+ 
+}
+
+
+

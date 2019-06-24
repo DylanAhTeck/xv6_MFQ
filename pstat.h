@@ -24,6 +24,7 @@ struct pstat
 };
 
 struct pstat pstat_var[NPSTAT];
+
 /*
 pid -> DONE. Take from proc stucture
 name -> DONE. 
