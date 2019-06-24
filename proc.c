@@ -28,6 +28,19 @@ void addToQueue(struct priorityqueue *pq, struct proc *p);
 void removeFromQueue(struct priorityqueue *pq, struct proc *p);
 void downgradeQueue(struct priorityqueue *pq, struct proc *p);
 
+// Global variables to maintain info
+int queue0[500];
+int queue1[500];
+int queue2[500];
+
+char* name0[500];
+char* name1[500];
+char* name2[500];
+
+char* state0[500];
+char* state1[500];
+char* state2[500];
+
 void pinit(void)
 {
   initlock(&ptable.lock, "ptable");
@@ -353,7 +366,6 @@ int wait(void)
 //HELPER FUNCTIONS
 
 //Return highest non-empty priorty queue with ready process
-
 struct priorityqueue *returnQueue(void)
 {
   if (q0.numOfProc)
@@ -392,6 +404,7 @@ struct priorityqueue *returnQueue(void)
   return &q0;
 }
 
+//Adds process to end of specified priority queue
 void addToQueue(struct priorityqueue *pq, struct proc *p)
 {
 
@@ -404,6 +417,7 @@ void addToQueue(struct priorityqueue *pq, struct proc *p)
   p->priority = pq->priority;
 }
 
+//Removes process from the start of specified priority queue
 void removeFromQueue(struct priorityqueue *pq, struct proc *p)
 {
   if (pq->queue[0] != p)
@@ -419,6 +433,7 @@ void removeFromQueue(struct priorityqueue *pq, struct proc *p)
   pq->numOfProc--;
 }
 
+//Downgrades process to a lower priority queue
 void downgradeQueue(struct priorityqueue *pq, struct proc *p)
 {
   if (pq->priority == 0)
@@ -456,6 +471,7 @@ void updatePstat(void)
   }
 }
 
+//Returns highest priority RUNNABLE process
 struct proc *returnProc(void)
 {
   struct priorityqueue *pq = returnQueue();
@@ -487,59 +503,7 @@ struct proc *returnProc(void)
   return 0;
 }
 
-
-void printQueues(void)
-{
-
-  
-cprintf("\nQUEUE0 TIMELINE -- ");
-for(int i = 0; i < q0.end; i++)
-{
-  cprintf("PID: %d %s ", q0.queue[i]->pid, q0.queue[i]->name);
-  
-}
-
-cprintf("\nQUEUE1 TIMELINE -- ");
-for(int i = 0; i < q1.end; i++)
-{
-  cprintf("PID: %d %s ", q1.queue[i]->pid, q1.queue[i]->name);
-}
-
-cprintf("\nQUEUE2 TIMELINE -- ");
-
-for(int i = 0; i < q2.end; i++)
-{
-  cprintf("PID: %d %s ", q2.queue[i]->pid, q2.queue[i]->name);
- 
-}
-
-
-
-}
-
-
-/*
-void print(void)
-{
-  cprintf("\nQUEUES -- ");
-  for(int i = 0; i < 100; i++)
-  {
-    cprint("%s ", p->name[i]);
-  }
-  cprintf("\n");
-    for(int i = 0; i < 100; i++)
-  {
-    cprint("%s ", p->name[i]);
-  }
-  cprintf("\n");
-    for(int i = 0; i < 100; i++)
-  {
-    cprint("%s ", p->name[i]);
-  }
-  cprintf("\n");
-  
-}
-*/
+//Moves process from Q2 to Q1
 void boost(struct proc *p)
 {
   removeFromQueue(&q2, p);
@@ -547,17 +511,6 @@ void boost(struct proc *p)
   p->priority = 0;
 }
 
-int queue0[500];
-int queue1[500];
-int queue2[500];
-
-char* name0[500];
-char* name1[500];
-char* name2[500];
-
-char* state0[500];
-char* state1[500];
-char* state2[500];
 
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
@@ -573,8 +526,6 @@ void scheduler(void)
   struct cpu *c = mycpu();
   c->proc = 0;
 
-  
-
   for (;;)
   {
     // Enable interrupts on this processor.
@@ -583,21 +534,9 @@ void scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
 
-    //struct priorityqueue *pq = returnQueue();
-    //struct proc **queue = pq->queue;
-    /*
-    NOTE FOR TOMR:
-    The xv6 scheduler automatically schedules processes for 1 tick in RR. 
-    Hence modify existing code to loop each queue's appropriate amount of ticks
-    */
-
-    //THIS COMPILES - NOT GOING TO RISK THIS BEING WRONG THOUGH
-    //for (p = queue[0]; p < &*queue[NPROC]; p++)
-
     for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    //for (int i = 0; i < NPROC; i++)
     {
-      //Careful here. If get error check here
+      //returnProc returns the highest priority RUNNABLE process
       if (p != returnProc())
         continue;
 
@@ -606,14 +545,8 @@ void scheduler(void)
       //printQueues();
       
       int queuepriority = p->priority;
-     
       int count = 0;
 
-      //cprintf("%d", p->priority);
-      //cprintf("%s ", p->name);
-
-      // if (p->state != RUNNABLE)
-      //  continue;
 
       //Each iteration of this loop is a tick!
       //If p->state goes to something other than runnable by end of this
@@ -624,25 +557,19 @@ void scheduler(void)
         {
           queue0[TOTAL_TICKS] = p->pid;
           name0[TOTAL_TICKS] = p->name;
-          if(p->state == RUNNABLE) state0[TOTAL_TICKS] = "Runnable";
-          if(p->state == SLEEPING) state0[TOTAL_TICKS] = "Sleeping";
-          if(p->state == ZOMBIE) state0[TOTAL_TICKS] = "Zombie";
+        
         }
         if(p->priority == 1) 
         {
           queue1[TOTAL_TICKS] = p->pid;
           name1[TOTAL_TICKS] = p->name;
-          if(p->state == RUNNABLE) state1[TOTAL_TICKS] = "Runnable";
-          if(p->state == SLEEPING) state1[TOTAL_TICKS] = "Sleeping";
-          if(p->state == ZOMBIE) state1[TOTAL_TICKS] = "Zombie";
+         
         }
         if(p->priority == 2) 
         {
           queue2[TOTAL_TICKS] = p->pid;
           name2[TOTAL_TICKS] = p->name;
-                if(p->state == RUNNABLE) state2[TOTAL_TICKS] = "Runnable";
-          if(p->state == SLEEPING) state2[TOTAL_TICKS] = "Sleeping";
-          if(p->state == ZOMBIE) state2[TOTAL_TICKS] = "Zombie";
+         
         }
         
         // Switch to chosen process.  It is the process's job
@@ -663,8 +590,9 @@ void scheduler(void)
 
         //If state is not RUNNABLE here then means tick did not complete
         
-        //Added
 
+        //Added to maintain info about state when process RETURNS
+        //to scheduler
         if(p->priority == 0) 
         {
           
@@ -699,35 +627,31 @@ void scheduler(void)
         if (TOTAL_TICKS < NTICKS)
           TOTAL_TICKS++;
       }
-      //pstat - ticks[3]. Update ticks regardless
+      
+      //Maintaining pstat info
       p->ticks[queuepriority] += count;
-      //pstat - times[3]
-      //cprintf("QUEUE PRIORITY %d", queuepriority);
       p->times[p->priority] = p->times[p->priority] + 1;
 
-      //Q: How to test for sleep and I/O?
-      //Will the state be sleeping?
-      // Decrement priority if used timeslice, else leave the same
+     
+      //Handles case where process uses its time slice and is demoted
       if (p->state == RUNNABLE && (p->priority == 1 || p->priority == 0))
       {
         downgradeQueue(queue, p);
-      }
+      } 
 
+      //Handles case where process in Q2 exceeds 50 ticks
       else if (p->state == RUNNABLE && p->priority == 2 && p->Ticks >= 50)
       {
         boost(p);
      
       }
 
+      //Handles case where process does NOT use its timeslice
       else if (p->state == SLEEPING)
       {
         removeFromQueue(queue, p);
         addToQueue(queue, p);
       }
-
-      //  p->priority++;
-
-      //break;
     }
     release(&ptable.lock);
   }
@@ -910,52 +834,6 @@ void procdump(void)
   }
 }
 
-/*
-int getpinfo(int pid)
-{
-  struct proc *p;
-
-  acquire(&ptable.lock);
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-  {
-    if (p->pid == pid)
-    {
-
-      cprintf("PID: %d\n", p->pid);
-      cprintf("Name: %s\n", p->name);
-      cprintf("Priority: %d\n", p->priority);
-      cprintf("Ticks: ");
-      for (int i = 0; i < 3; i++)
-      {
-        cprintf("%d ", p->ticks[i]);
-        if (i == 2)
-          cprintf("\n");
-      }
-      cprintf("Times: ");
-      for (int i = 0; i < 3; i++)
-      {
-        cprintf("%d ", p->times[i]);
-        if (i == 2)
-          cprintf("\n");
-      }
-      cprintf("Queue: ");
-      for (int i = 0; i < NTICKS; i++)
-      {
-        cprintf("%d ", p->queue[i]);
-        if (i == NTICKS - 1)
-          cprintf("\n");
-      }
-      cprintf("Total ticks: %d\n", p->total_ticks);
-      cprintf("Wait time: %d\n", p->wait_time);
-
-      release(&ptable.lock);
-      return 0;
-    }
-  }
-  release(&ptable.lock);
-  return -1;
-}
-*/
 
 void print_pstat_info(struct proc *p)
 {
@@ -1051,12 +929,21 @@ void printPID(void)
 
 int getpinfo(int target_pid)
 {
-  //printAll();
-  printPID();
- printNames();
- printStates();
+
+ printPID();
+ //printNames();
+ //printStates();
+  
   return 0;
  
+ /*
+acquire(&ptable.lock);
+ for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+ print_pstat_info(struct proc *p);
+  }
+release(&ptable.lock);
+*/
 }
 
 
