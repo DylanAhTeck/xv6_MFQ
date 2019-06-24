@@ -1,17 +1,14 @@
-#include "param.h"
-#define NPSTAT 64
-#define NTICKS 500
-
 // Per-CPU state
-struct cpu {
-  uchar apicid;                // Local APIC ID
-  struct context *scheduler;   // swtch() here to enter scheduler
-  struct taskstate ts;         // Used by x86 to find stack for interrupt
-  struct segdesc gdt[NSEGS];   // x86 global descriptor table
-  volatile uint started;       // Has the CPU started?
-  int ncli;                    // Depth of pushcli nesting.
-  int intena;                  // Were interrupts enabled before pushcli?
-  struct proc *proc;           // The process running on this cpu or null
+struct cpu
+{
+  uchar apicid;              // Local APIC ID
+  struct context *scheduler; // swtch() here to enter scheduler
+  struct taskstate ts;       // Used by x86 to find stack for interrupt
+  struct segdesc gdt[NSEGS]; // x86 global descriptor table
+  volatile uint started;     // Has the CPU started?
+  int ncli;                  // Depth of pushcli nesting.
+  int intena;                // Were interrupts enabled before pushcli?
+  struct proc *proc;         // The process running on this cpu or null
 };
 
 extern struct cpu cpus[NCPU];
@@ -28,7 +25,8 @@ extern int ncpu;
 // The layout of the context matches the layout of the stack in swtch.S
 // at the "Switch stacks" comment. Switch doesn't save eip explicitly,
 // but it is on the stack and allocproc() manipulates it.
-struct context {
+struct context
+{
   uint edi;
   uint esi;
   uint ebx;
@@ -36,40 +34,70 @@ struct context {
   uint eip;
 };
 
-enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+/*
+struct proc *q0[NPROC];
+struct proc *q1[NPROC];
+struct proc *q2[NPROC];
+int qnum0;
+int qnum1;
+int qnum2;
+*/
+struct priorityqueue
+{
+  struct proc *queue[NPROC];
+  int ticks;
+  int end;
+  int numOfProc;
+  int priority;
+};
+
+struct priorityqueue q0;
+struct priorityqueue q1;
+struct priorityqueue q2;
+
+int TOTAL_TICKS;
+
+enum procstate
+{
+  UNUSED,
+  EMBRYO,
+  SLEEPING,
+  RUNNABLE,
+  RUNNING,
+  ZOMBIE
+};
 
 // Per-process state
-struct proc {
-  uint sz;                     // Size of process memory (bytes)
-  pde_t* pgdir;                // Page table
-  char *kstack;                // Bottom of kernel stack for this process
-  enum procstate state;        // Process state
-  int pid;                     // Process ID
-  struct proc *parent;         // Parent process
-  struct trapframe *tf;        // Trap frame for current syscall
-  struct context *context;     // swtch() here to run process
-  void *chan;                  // If non-zero, sleeping on chan
-  int killed;                  // If non-zero, have been killed
-  struct file *ofile[NOFILE];  // Open files
-  struct inode *cwd;           // Current directory
-  char name[16];               // Process name (debugging)
-  int priority; // current priority level of each process (0-2)
-  int ticks[3]; // number of ticks each process used the last time it was
-  // scheduled in each priority queue
-  // cannot be greater than the time-slice for each queue
+struct proc
+{
+  uint sz;                    // Size of process memory (bytes)
+  pde_t *pgdir;               // Page table
+  char *kstack;               // Bottom of kernel stack for this process
+  enum procstate state;       // Process state
+  int pid;                    // Process ID
+  struct proc *parent;        // Parent process
+  struct trapframe *tf;       // Trap frame for current syscall
+  struct context *context;    // swtch() here to run process
+  void *chan;                 // If non-zero, sleeping on chan
+  int killed;                 // If non-zero, have been killed
+  struct file *ofile[NOFILE]; // Open files
+  struct inode *cwd;          // Current directory
+  char name[16];              // Process name (debugging)
 
-  int times[3]; // number of times each process was scheduled at each of 3
-  // priority queues
-  int queue[NTICKS]; //queue that a RUNNABLE process is sitting in during each tick
+  //Added to fill out pstat
 
-  int total_ticks; // total number of ticks each RUNNABLE process has
-  // accumulated in all queues
-  // this value should be equal to the sum of the 3 values in ticks
-  int wait_time; // number of ticks each RUNNABLE process waited in the lowest
-  // priority queue
+  int priority; // Added for proj3
 
-  // Keeps track of time left this process has to run
-  int time_remaining;
+  int ticks[3];
+  int times[3];
+  //NTICKS = 500 (MACRO)
+  int queue[500];
+
+  int total_ticks;
+  int wait_time;
+
+  //Not in pstat
+  int Ticks;
 };
 
 // Process memory is laid out contiguously, low addresses first:
@@ -77,11 +105,3 @@ struct proc {
 //   original data and bss
 //   fixed-size stack
 //   expandable heap
-
-void update_process_state();
-void update_all_pstats();
-void shift_elements(int qnum, int index);
-void remove_finished_processes();
-void print_state(struct proc* p);
-void print_proc_timelines();
-void print_cpu_run_timeline();
