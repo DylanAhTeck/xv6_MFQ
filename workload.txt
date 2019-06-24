@@ -1,0 +1,29 @@
+Graph 1
+
+The test1.c specifications were as follows: test1.c should implement a mixed workload that includes an IO intensive process and a CPU
+intensive process. 
+
+This was achieved by forking a program once; the child was made to run a computation task and the parent
+an I/O task. Both the child and parent were allowed to run at the same time (i.e parent did 
+not have to wait for child to finish).
+
+Looking at the graph it is clear that the intended behaviour was achieved. The parent (pid 3) and 
+child (pid 4) both start running at tick [FILL IN]. After the parent begins it's first iteration of the I/O,
+it goes to SLEEP and allows the child (computation to run). Later on we see in the 
+"3 3 3 3 3 3 4 " pattern how the parent relinquishes the CPU regularly to effetuate its IO operation (
+hence why there is a 4 at the end of each sequence of 3s).
+
+
+Graph 2
+
+test2.c simply runs a 2-3 second computation that constantly uses the CPU. 
+As the graph shows, after a 50 or more ticks in the bottom queue it gets promoted 
+back to Q0 and starts the process again. 
+
+Graph 3
+
+test3.c runs sleep() in a for loop to make the process relinquish the CPU before the end of its time slice.
+As the result shows, it stays on the Q1 queue for the duration of that process. The reason why it repeats on Q1
+instead of Q0 is because Q0 uses its entire time slice to print out a line and start the for loop, by which
+point the proc is demoted to Q1. Hence the sleep() operations begin when the process is in Q1 and so it remains
+in that queue. 
